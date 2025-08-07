@@ -77,8 +77,8 @@ function App() {
             <Footer />
           </>
         } />
-        <Route path="admin/login" element={<AdminLogin />} />
-        <Route path="admin/*" element={<AdminDashboard />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/*" element={<AdminDashboard />} />
       </Routes>
       
       {/* Persistent Notification System */}
