@@ -15,6 +15,8 @@ import Cryptocurrency from './pages/Cryptocurrency';
 import BlogPost from './pages/BlogPost';
 import NewsPage from './pages/NewsPage';
 import InvestokidUpdates from './pages/InvestokidUpdates';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminLogin from './pages/admin/AdminLogin';
 
 function App() {
   return (
@@ -75,6 +77,8 @@ function App() {
             <Footer />
           </>
         } />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/*" element={<AdminDashboard />} />
       </Routes>
       
       {/* Persistent Notification System */}
