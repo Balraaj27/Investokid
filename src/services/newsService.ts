@@ -1,7 +1,7 @@
 // RSS News Service for Indian Financial News
 
 // News API Configuration
-const NEWS_API_KEY = '6867d4bbc2ef4790ae9fb8a59ae03596'; // Your NewsAPI key
+const NEWS_API_KEY = 'YOUR_NEWS_API_KEY_HERE'; // Get from: https://newsapi.org/register
 const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
 
 // GNews API Configuration (backup)
@@ -241,7 +241,10 @@ export const getNewsBySource = (news: NewsItem[], source: string): NewsItem[] =>
 // Fetch news from NewsAPI.org (Primary)
 const fetchNewsAPI = async (): Promise<NewsItem[]> => {
   try {
-    console.log('🔄 Fetching live news from NewsAPI.org with your API key...');
+    // DISABLED: NewsAPI to prevent infinite calls and rate limiting
+    console.log('⚠️ NewsAPI disabled - add your API key to enable');
+    throw new Error('NewsAPI key not configured');
+    
     const apiUrl = `${NEWS_API_BASE_URL}/top-headlines?country=in&category=business&pageSize=20&apiKey=${NEWS_API_KEY}`;
     
     const response = await fetch(apiUrl, {

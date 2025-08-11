@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNews } from '../../hooks/useNews';
+import type { NewsItem } from '../../lib/supabase';
 import { 
   Plus, 
   Search, 
@@ -16,66 +18,16 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-interface NewsItem {
-  id: number;
-  title: string;
-  description: string;
-  content: string;
-  source: string;
-  author: string;
-  category: string;
-  status: 'active' | 'inactive' | 'featured';
-  publishDate: string;
-  link: string;
-  views: number;
-  tags: string[];
-}
-
 const NewsManagement: React.FC = () => {
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([
-    {
-      id: 1,
-      title: "Sensex rises 200 points on strong FII inflows",
-      description: "Indian equity markets opened higher today driven by positive global cues and strong foreign institutional investor inflows.",
-      content: "The Indian stock market witnessed a strong rally today as the Sensex gained over 200 points...",
-      source: "Economic Times",
-      author: "Market Reporter",
-      category: "Market News",
-      status: "active",
-      publishDate: "2024-12-15",
-      link: "https://economictimes.indiatimes.com/example",
-      views: 15600,
-      tags: ["sensex", "fii", "market"]
-    },
-    {
-      id: 2,
-      title: "RBI maintains repo rate at 6.5% in latest policy review",
-      description: "The Reserve Bank of India kept the benchmark repo rate unchanged at 6.5% citing inflation concerns and global economic uncertainty.",
-      content: "The Reserve Bank of India's Monetary Policy Committee decided to maintain the repo rate...",
-      source: "Business Standard",
-      author: "Policy Desk",
-      category: "Policy News",
-      status: "featured",
-      publishDate: "2024-12-14",
-      link: "https://business-standard.com/example",
-      views: 22300,
-      tags: ["rbi", "repo rate", "policy"]
-    },
-    {
-      id: 3,
-      title: "IT stocks rally on strong Q3 earnings outlook",
-      description: "Information technology stocks surged in early trade as investors bet on strong third-quarter earnings from major IT companies.",
-      content: "The IT sector witnessed significant buying interest today...",
-      source: "Moneycontrol",
-      author: "Tech Reporter",
-      category: "Sector News",
-      status: "active",
-      publishDate: "2024-12-13",
-      link: "https://moneycontrol.com/example",
-      views: 8900,
-      tags: ["it stocks", "earnings", "q3"]
-    }
-  ]);
+  // Use backend data
+  const { 
+    news: newsItems, 
+    loading, 
+    error, 
+    createNews, 
+    updateNews, 
+    deleteNews 
+  } = useNews();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -110,7 +62,7 @@ const NewsManagement: React.FC = () => {
 
   const handleCreateNews = () => {
     setEditingNews({
-      id: 0,
+      id: '',
       title: '',
       description: '',
       content: '',
@@ -118,10 +70,12 @@ const NewsManagement: React.FC = () => {
       author: '',
       category: categories[0],
       status: 'active',
-      publishDate: new Date().toISOString().split('T')[0],
-      link: '',
+      publish_date: new Date().toISOString().split('T')[0],
+      external_link: '',
       views: 0,
-      tags: []
+      tags: [],
+      created_at: '',
+      updated_at: ''
     });
     setShowModal(true);
   };
@@ -134,32 +88,47 @@ const NewsManagement: React.FC = () => {
   const handleSaveNews = () => {
     if (!editingNews) return;
 
-    if (editingNews.id === 0) {
+    if (editingNews.id === '') {
       // Create new news
-      const newNews = {
-        ...editingNews,
-        id: Math.max(...newsItems.map(n => n.id)) + 1
-      };
-      setNewsItems([newNews, ...newsItems]);
+      const { id, created_at, updated_at, ...newsData } = editingNews;
+      createNews(newsData).then(() => {
+        setShowModal(false);
+        setEditingNews(null);
+      }).catch(err => {
+        console.error('Error creating news:', err);
+        alert('Error creating news. Please try again.');
+      });
     } else {
       // Update existing news
-      setNewsItems(newsItems.map(n => n.id === editingNews.id ? editingNews : n));
+      const { created_at, updated_at, ...updates } = editingNews;
+      updateNews(editingNews.id, updates).then(() => {
+        setShowModal(false);
+        setEditingNews(null);
+      }).catch(err => {
+        console.error('Error updating news:', err);
+        alert('Error updating news. Please try again.');
+      });
     }
-
-    setShowModal(false);
-    setEditingNews(null);
   };
 
-  const handleDeleteNews = (id: number) => {
+  const handleDeleteNews = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this news item?')) {
-      setNewsItems(newsItems.filter(n => n.id !== id));
+      try {
+        await deleteNews(id);
+      } catch (err) {
+        console.error('Error deleting news:', err);
+        alert('Error deleting news. Please try again.');
+      }
     }
   };
 
-  const handleStatusChange = (id: number, newStatus: NewsItem['status']) => {
-    setNewsItems(newsItems.map(n => 
-      n.id === id ? { ...n, status: newStatus } : n
-    ));
+  const handleStatusChange = async (id: string, newStatus: NewsItem['status']) => {
+    try {
+      await updateNews(id, { status: newStatus });
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Error updating status. Please try again.');
+    }
   };
 
   const handleRefreshNews = async () => {
@@ -559,8 +528,8 @@ const NewsManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
                   <input
                     type="date"
-                    value={editingNews.publishDate}
-                    onChange={(e) => setEditingNews({ ...editingNews, publishDate: e.target.value })}
+                    value={editingNews.publish_date}
+                    onChange={(e) => setEditingNews({ ...editingNews, publish_date: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -569,10 +538,24 @@ const NewsManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">External Link</label>
                   <input
                     type="url"
-                    value={editingNews.link}
-                    onChange={(e) => setEditingNews({ ...editingNews, link: e.target.value })}
+                    value={editingNews.external_link}
+                    onChange={(e) => setEditingNews({ ...editingNews, external_link: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="https://example.com/news-article"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={editingNews.tags.join(', ')}
+                    onChange={(e) => setEditingNews({ 
+                      ...editingNews, 
+                      tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                    })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., market, stocks, economy"
                   />
                 </div>
               </div>
@@ -590,7 +573,7 @@ const NewsManagement: React.FC = () => {
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
-                {editingNews.id === 0 ? 'Add News' : 'Save Changes'}
+                {editingNews.id === '' ? 'Add News' : 'Save Changes'}
               </button>
             </div>
           </div>

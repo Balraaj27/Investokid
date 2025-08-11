@@ -15,52 +15,31 @@ interface UseGoogleTrendsReturn {
   refetch: () => void;
 }
 
-export const useGoogleTrends = (refreshInterval: number = 300000): UseGoogleTrendsReturn => {
+export const useGoogleTrends = (refreshInterval: number = 0): UseGoogleTrendsReturn => {
   const [trends, setTrends] = useState<TrendItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   const fetchTrends = useCallback(async () => {
+    // Prevent infinite API calls
+    if (hasAttemptedFetch) {
+      console.log('🛑 Google Trends already fetched, skipping...');
+      return;
+    }
+    
     try {
+      console.log('🔄 Fetching Google Trends...');
       setLoading(true);
       setError(null);
       
-      // Use RSS2JSON to convert Google Trends RSS to JSON
-      const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=IN';
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=10`;
-      
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(10000) // 10 second timeout
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.status !== 'ok') {
-        throw new Error(`RSS2JSON API error: ${data.message || 'Unknown error'}`);
-      }
-      
-      const trendItems: TrendItem[] = data.items.slice(0, 5).map((item: any) => ({
-        title: item.title || 'Trending Topic',
-        link: item.link || '#',
-        pubDate: item.pubDate || new Date().toISOString(),
-        description: item.description || 'Popular search trend in India'
-      }));
-      
-      setTrends(trendItems);
-      setLastUpdate(new Date());
-      console.log('✅ Successfully fetched Google Trends data:', trendItems.length, 'items');
+      // DISABLED: Google Trends API to prevent infinite calls
+      console.log('⚠️ Google Trends API disabled - using fallback data');
+      throw new Error('Google Trends API disabled');
       
     } catch (err) {
-      console.warn('❌ Google Trends API failed, using fallback data:', err);
+      console.warn('🔄 Using fallback trends data');
       setError(err instanceof Error ? err.message : 'Failed to fetch trends');
       
       // Fallback trending topics for India
@@ -99,24 +78,21 @@ export const useGoogleTrends = (refreshInterval: number = 300000): UseGoogleTren
       
       setTrends(fallbackTrends);
       setLastUpdate(new Date());
+      setHasAttemptedFetch(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasAttemptedFetch]);
 
   const refetch = useCallback(() => {
+    console.log('🔄 Manual Google Trends refetch');
+    setHasAttemptedFetch(false);
     fetchTrends();
   }, [fetchTrends]);
 
   useEffect(() => {
-    // Initial fetch
+    console.log('🎯 useGoogleTrends effect triggered');
     fetchTrends();
-
-    // Set up interval for periodic updates
-    const interval = setInterval(fetchTrends, refreshInterval);
-
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
   }, [fetchTrends, refreshInterval]);
 
   return {

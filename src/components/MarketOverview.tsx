@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, RefreshCw, ExternalLink } from 'lucide-react';
-import { useFinancialNews } from '../hooks/useFinancialNews';
+import { useNews } from '../hooks/useNews';
 import { useNavigate } from 'react-router-dom';
 
 const MarketOverview: React.FC = () => {
@@ -52,7 +52,7 @@ const MarketOverview: React.FC = () => {
     error: newsError,
     lastUpdate: newsLastUpdate, 
     refetch: refreshNews 
-  } = useFinancialNews(300000); // 5 minutes auto-refresh
+  } = useNews({ status: 'active', limit: 6 });
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-IN', { 

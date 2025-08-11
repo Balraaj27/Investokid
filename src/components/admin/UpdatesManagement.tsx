@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { usePlatformUpdates } from '../../hooks/usePlatformUpdates';
+import type { PlatformUpdate } from '../../lib/supabase';
 import { 
   Plus, 
   Search, 
@@ -16,85 +18,17 @@ import {
   Sparkles
 } from 'lucide-react';
 
-interface UpdateItem {
-  id: number;
-  title: string;
-  excerpt: string;
-  content: string;
-  author: string;
-  category: string;
-  status: 'draft' | 'published' | 'archived';
-  publishDate: string;
-  readTime: string;
-  views: number;
-  isPinned: boolean;
-  isNew: boolean;
-  tags: string[];
-}
-
 const UpdatesManagement: React.FC = () => {
-  const [updates, setUpdates] = useState<UpdateItem[]>([
-    {
-      id: 1,
-      title: "New Advanced Portfolio Analytics Dashboard",
-      excerpt: "Introducing comprehensive portfolio analysis tools with risk metrics, performance tracking, and detailed asset allocation insights.",
-      content: "We're excited to announce the launch of our new Advanced Portfolio Analytics Dashboard...",
-      author: "Investokid Team",
-      category: "Feature Release",
-      status: "published",
-      publishDate: "2024-12-18",
-      readTime: "3 min read",
-      views: 2500,
-      isPinned: true,
-      isNew: true,
-      tags: ["portfolio", "analytics", "dashboard"]
-    },
-    {
-      id: 2,
-      title: "Enhanced Mobile App Experience",
-      excerpt: "Redesigned mobile interface with improved navigation, faster loading times, and new touch-friendly financial calculators.",
-      content: "Our mobile app has received a major update focusing on user experience...",
-      author: "Development Team",
-      category: "App Update",
-      status: "published",
-      publishDate: "2024-12-15",
-      readTime: "2 min read",
-      views: 1800,
-      isPinned: false,
-      isNew: true,
-      tags: ["mobile", "app", "ui"]
-    },
-    {
-      id: 3,
-      title: "Real-time Market Data Integration",
-      excerpt: "Now featuring live market data from NSE and BSE with real-time price updates and advanced charting capabilities.",
-      content: "We've integrated real-time market data to provide you with the most current information...",
-      author: "Data Team",
-      category: "Platform Enhancement",
-      status: "published",
-      publishDate: "2024-12-12",
-      readTime: "4 min read",
-      views: 3200,
-      isPinned: false,
-      isNew: false,
-      tags: ["market data", "real-time", "charts"]
-    },
-    {
-      id: 4,
-      title: "Security Enhancement: Two-Factor Authentication",
-      excerpt: "Enhanced account security with mandatory 2FA implementation and advanced encryption protocols.",
-      content: "Security is our top priority. We've implemented two-factor authentication...",
-      author: "Security Team",
-      category: "Security Update",
-      status: "draft",
-      publishDate: "2024-12-20",
-      readTime: "3 min read",
-      views: 0,
-      isPinned: false,
-      isNew: false,
-      tags: ["security", "2fa", "authentication"]
-    }
-  ]);
+  // Use backend data
+  const { 
+    updates, 
+    loading, 
+    error, 
+    createUpdate, 
+    updateUpdate, 
+    deleteUpdate, 
+    togglePin 
+  } = usePlatformUpdates();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -136,19 +70,21 @@ const UpdatesManagement: React.FC = () => {
 
   const handleCreateUpdate = () => {
     setEditingUpdate({
-      id: 0,
+      id: '',
       title: '',
       excerpt: '',
       content: '',
       author: 'Investokid Team',
       category: categories[0],
       status: 'draft',
-      publishDate: new Date().toISOString().split('T')[0],
-      readTime: '3 min read',
+      publish_date: new Date().toISOString().split('T')[0],
+      read_time: '3 min read',
       views: 0,
-      isPinned: false,
-      isNew: true,
-      tags: []
+      is_pinned: false,
+      is_new: true,
+      tags: [],
+      created_at: '',
+      updated_at: ''
     });
     setShowModal(true);
   };
@@ -161,38 +97,56 @@ const UpdatesManagement: React.FC = () => {
   const handleSaveUpdate = () => {
     if (!editingUpdate) return;
 
-    if (editingUpdate.id === 0) {
+    if (editingUpdate.id === '') {
       // Create new update
-      const newUpdate = {
-        ...editingUpdate,
-        id: Math.max(...updates.map(u => u.id)) + 1
-      };
-      setUpdates([newUpdate, ...updates]);
+      const { id, created_at, updated_at, ...updateData } = editingUpdate;
+      createUpdate(updateData).then(() => {
+        setShowModal(false);
+        setEditingUpdate(null);
+      }).catch(err => {
+        console.error('Error creating update:', err);
+        alert('Error creating update. Please try again.');
+      });
     } else {
       // Update existing update
-      setUpdates(updates.map(u => u.id === editingUpdate.id ? editingUpdate : u));
+      const { created_at, updated_at, ...updateData } = editingUpdate;
+      updateUpdate(editingUpdate.id, updateData).then(() => {
+        setShowModal(false);
+        setEditingUpdate(null);
+      }).catch(err => {
+        console.error('Error updating update:', err);
+        alert('Error updating update. Please try again.');
+      });
     }
-
-    setShowModal(false);
-    setEditingUpdate(null);
   };
 
-  const handleDeleteUpdate = (id: number) => {
+  const handleDeleteUpdate = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this update?')) {
-      setUpdates(updates.filter(u => u.id !== id));
+      try {
+        await deleteUpdate(id);
+      } catch (err) {
+        console.error('Error deleting update:', err);
+        alert('Error deleting update. Please try again.');
+      }
     }
   };
 
-  const handleStatusChange = (id: number, newStatus: UpdateItem['status']) => {
-    setUpdates(updates.map(u => 
-      u.id === id ? { ...u, status: newStatus } : u
-    ));
+  const handleStatusChange = async (id: string, newStatus: PlatformUpdate['status']) => {
+    try {
+      await updateUpdate(id, { status: newStatus });
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Error updating status. Please try again.');
+    }
   };
 
-  const handlePinToggle = (id: number) => {
-    setUpdates(updates.map(u => 
-      u.id === id ? { ...u, isPinned: !u.isPinned } : u
-    ));
+  const handlePinToggle = async (id: string) => {
+    try {
+      await togglePin(id);
+    } catch (err) {
+      console.error('Error toggling pin:', err);
+      alert('Error toggling pin. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -261,7 +215,7 @@ const UpdatesManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Pinned</p>
-              <p className="text-3xl font-bold text-yellow-600">{updates.filter(u => u.isPinned).length}</p>
+              <p className="text-3xl font-bold text-yellow-600">{updates.filter(u => u.is_pinned).length}</p>
             </div>
             <Star className="h-8 w-8 text-yellow-600" />
           </div>
@@ -344,10 +298,10 @@ const UpdatesManagement: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <div className="text-sm font-medium text-gray-900 line-clamp-1">{update.title}</div>
-                        {update.isPinned && (
+                        {update.is_pinned && (
                           <Star className="h-4 w-4 text-yellow-500 fill-current" />
                         )}
-                        {update.isNew && (
+                        {update.is_new && (
                           <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-full">
                             NEW
                           </span>
@@ -356,7 +310,7 @@ const UpdatesManagement: React.FC = () => {
                       <div className="text-sm text-gray-500 line-clamp-2">{update.excerpt}</div>
                       <div className="flex items-center gap-2 mt-1">
                         <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">{update.readTime}</span>
+                        <span className="text-xs text-gray-500">{update.read_time}</span>
                       </div>
                     </div>
                   </td>
@@ -374,7 +328,7 @@ const UpdatesManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <select
                       value={update.status}
-                      onChange={(e) => handleStatusChange(update.id, e.target.value as UpdateItem['status'])}
+                      onChange={(e) => handleStatusChange(update.id, e.target.value as PlatformUpdate['status'])}
                       className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(update.status)}`}
                     >
                       {statuses.map(status => (
@@ -390,17 +344,17 @@ const UpdatesManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1 text-sm text-gray-500">
                       <Calendar className="h-3 w-3" />
-                      {new Date(update.publishDate).toLocaleDateString()}
+                      {new Date(update.publish_date).toLocaleDateString()}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handlePinToggle(update.id)}
-                        className={`p-1 ${update.isPinned ? 'text-yellow-600' : 'text-gray-400 hover:text-yellow-600'}`}
-                        title={update.isPinned ? 'Unpin' : 'Pin'}
+                        className={`p-1 ${update.is_pinned ? 'text-yellow-600' : 'text-gray-400 hover:text-yellow-600'}`}
+                        title={update.is_pinned ? 'Unpin' : 'Pin'}
                       >
-                        <Star className={`h-4 w-4 ${update.isPinned ? 'fill-current' : ''}`} />
+                        <Star className={`h-4 w-4 ${update.is_pinned ? 'fill-current' : ''}`} />
                       </button>
                       <button
                         onClick={() => handleEditUpdate(update)}
@@ -563,8 +517,8 @@ const UpdatesManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
                   <input
                     type="date"
-                    value={editingUpdate.publishDate}
-                    onChange={(e) => setEditingUpdate({ ...editingUpdate, publishDate: e.target.value })}
+                    value={editingUpdate.publish_date}
+                    onChange={(e) => setEditingUpdate({ ...editingUpdate, publish_date: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -576,8 +530,8 @@ const UpdatesManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Read Time</label>
                   <input
                     type="text"
-                    value={editingUpdate.readTime}
-                    onChange={(e) => setEditingUpdate({ ...editingUpdate, readTime: e.target.value })}
+                    value={editingUpdate.read_time}
+                    onChange={(e) => setEditingUpdate({ ...editingUpdate, read_time: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g., 3 min read"
                   />
@@ -587,8 +541,8 @@ const UpdatesManagement: React.FC = () => {
                   <input
                     type="checkbox"
                     id="isPinned"
-                    checked={editingUpdate.isPinned}
-                    onChange={(e) => setEditingUpdate({ ...editingUpdate, isPinned: e.target.checked })}
+                    checked={editingUpdate.is_pinned}
+                    onChange={(e) => setEditingUpdate({ ...editingUpdate, is_pinned: e.target.checked })}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <label htmlFor="isPinned" className="ml-2 block text-sm text-gray-900">
@@ -600,8 +554,8 @@ const UpdatesManagement: React.FC = () => {
                   <input
                     type="checkbox"
                     id="isNew"
-                    checked={editingUpdate.isNew}
-                    onChange={(e) => setEditingUpdate({ ...editingUpdate, isNew: e.target.checked })}
+                    checked={editingUpdate.is_new}
+                    onChange={(e) => setEditingUpdate({ ...editingUpdate, is_new: e.target.checked })}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <label htmlFor="isNew" className="ml-2 block text-sm text-gray-900">
@@ -623,7 +577,7 @@ const UpdatesManagement: React.FC = () => {
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
-                {editingUpdate.id === 0 ? 'Create Update' : 'Save Changes'}
+                {editingUpdate.id === '' ? 'Create Update' : 'Save Changes'}
               </button>
             </div>
           </div>

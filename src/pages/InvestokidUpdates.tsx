@@ -1,26 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Clock, User, ChevronLeft, ChevronRight, Calendar, Zap, Sparkles, Rocket, Star, Bell, Gift, Target } from 'lucide-react';
-
-interface Update {
-  id: number;
-  title: string;
-  excerpt: string;
-  content: string;
-  author: string;
-  readTime: string;
-  date: string;
-  category: string;
-  image: string;
-  isNew?: boolean;
-  isPinned?: boolean;
-}
+import { usePlatformUpdates } from '../hooks/usePlatformUpdates';
+import type { PlatformUpdate } from '../lib/supabase';
 
 const InvestokidUpdates: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const postsPerPage = 9;
+
+  // Use backend data
+  const { updates: allUpdates, loading, error } = usePlatformUpdates({ status: 'published' });
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -59,149 +50,42 @@ const InvestokidUpdates: React.FC = () => {
     }
   ];
 
-  const allUpdates: Update[] = [
-    {
-      id: 1,
-      title: "New Advanced Portfolio Analytics Dashboard",
-      excerpt: "Introducing comprehensive portfolio analysis tools with risk metrics, performance tracking, and detailed asset allocation insights for better investment decisions.",
-      content: "We're excited to announce the launch of our new Advanced Portfolio Analytics Dashboard...",
-      author: "Investokid Team",
-      readTime: "3 min read",
-      date: "Dec 18, 2024",
-      category: "Feature Release",
-      image: "from-blue-500 to-purple-600",
-      isNew: true,
-      isPinned: true
-    },
-    {
-      id: 2,
-      title: "Enhanced Mobile App Experience",
-      excerpt: "Redesigned mobile interface with improved navigation, faster loading times, and new touch-friendly financial calculators.",
-      content: "Our mobile app has received a major update focusing on user experience...",
-      author: "Development Team",
-      readTime: "2 min read",
-      date: "Dec 15, 2024",
-      category: "App Update",
-      image: "from-green-500 to-teal-600",
-      isNew: true
-    },
-    {
-      id: 3,
-      title: "Real-time Market Data Integration",
-      excerpt: "Now featuring live market data from NSE and BSE with real-time price updates and advanced charting capabilities.",
-      content: "We've integrated real-time market data to provide you with the most current information...",
-      author: "Data Team",
-      readTime: "4 min read",
-      date: "Dec 12, 2024",
-      category: "Platform Enhancement",
-      image: "from-orange-500 to-red-600"
-    },
-    {
-      id: 4,
-      title: "New Educational Video Series Launch",
-      excerpt: "Comprehensive video tutorials covering advanced investment strategies, technical analysis, and market fundamentals.",
-      content: "Our new educational video series is designed to help you master investment concepts...",
-      author: "Education Team",
-      readTime: "2 min read",
-      date: "Dec 10, 2024",
-      category: "Content Update",
-      image: "from-purple-500 to-pink-600"
-    },
-    {
-      id: 5,
-      title: "Security Enhancement: Two-Factor Authentication",
-      excerpt: "Enhanced account security with mandatory 2FA implementation and advanced encryption protocols.",
-      content: "Security is our top priority. We've implemented two-factor authentication...",
-      author: "Security Team",
-      readTime: "3 min read",
-      date: "Dec 8, 2024",
-      category: "Security Update",
-      image: "from-cyan-500 to-blue-600"
-    },
-    {
-      id: 6,
-      title: "API Integration for Third-party Tools",
-      excerpt: "New API endpoints allowing integration with popular trading platforms and portfolio management tools.",
-      content: "We're opening up our platform with new API integrations...",
-      author: "API Team",
-      readTime: "5 min read",
-      date: "Dec 5, 2024",
-      category: "Developer Update",
-      image: "from-indigo-500 to-purple-600"
-    },
-    {
-      id: 7,
-      title: "Improved News Aggregation System",
-      excerpt: "Enhanced financial news feed with AI-powered categorization and personalized recommendations.",
-      content: "Our news system now uses advanced AI to bring you the most relevant updates...",
-      author: "AI Team",
-      readTime: "3 min read",
-      date: "Dec 3, 2024",
-      category: "AI Enhancement",
-      image: "from-teal-500 to-green-600"
-    },
-    {
-      id: 8,
-      title: "Community Forum Beta Launch",
-      excerpt: "Connect with fellow investors in our new community forum featuring expert discussions and peer support.",
-      content: "We're launching a beta version of our community forum...",
-      author: "Community Team",
-      readTime: "2 min read",
-      date: "Dec 1, 2024",
-      category: "Community Feature",
-      image: "from-pink-500 to-red-600"
-    },
-    {
-      id: 9,
-      title: "Performance Optimization Update",
-      excerpt: "Significant improvements in page load times, database queries, and overall platform responsiveness.",
-      content: "We've been working hard to optimize platform performance...",
-      author: "Engineering Team",
-      readTime: "4 min read",
-      date: "Nov 28, 2024",
-      category: "Performance Update",
-      image: "from-yellow-500 to-orange-600"
-    },
-    {
-      id: 10,
-      title: "New Cryptocurrency Analysis Tools",
-      excerpt: "Advanced crypto portfolio tracking, DeFi yield calculators, and blockchain analytics integration.",
-      content: "Expanding our crypto capabilities with new analysis tools...",
-      author: "Crypto Team",
-      readTime: "6 min read",
-      date: "Nov 25, 2024",
-      category: "Crypto Update",
-      image: "from-violet-500 to-purple-600"
-    },
-    {
-      id: 11,
-      title: "Dark Mode Theme Implementation",
-      excerpt: "User-requested dark mode theme now available across all platform interfaces with customizable preferences.",
-      content: "Based on popular demand, we've implemented a comprehensive dark mode...",
-      author: "UI/UX Team",
-      readTime: "2 min read",
-      date: "Nov 22, 2024",
-      category: "UI Update",
-      image: "from-emerald-500 to-teal-600"
-    },
-    {
-      id: 12,
-      title: "Advanced Tax Planning Features",
-      excerpt: "New tax optimization tools including capital gains calculators and tax-loss harvesting recommendations.",
-      content: "Tax season preparation made easier with our new planning features...",
-      author: "Tax Team",
-      readTime: "5 min read",
-      date: "Nov 20, 2024",
-      category: "Tax Feature",
-      image: "from-red-500 to-pink-600"
+  const getUpdateImage = (category: string) => {
+    switch (category) {
+      case 'Feature Release':
+        return 'from-blue-500 to-purple-600';
+      case 'App Update':
+        return 'from-green-500 to-teal-600';
+      case 'Platform Enhancement':
+        return 'from-orange-500 to-red-600';
+      case 'Security Update':
+        return 'from-cyan-500 to-blue-600';
+      case 'Content Update':
+        return 'from-purple-500 to-pink-600';
+      case 'Developer Update':
+        return 'from-indigo-500 to-purple-600';
+      case 'AI Enhancement':
+        return 'from-teal-500 to-green-600';
+      case 'Community Feature':
+        return 'from-pink-500 to-red-600';
+      case 'Performance Update':
+        return 'from-yellow-500 to-orange-600';
+      case 'Crypto Update':
+        return 'from-violet-500 to-purple-600';
+      case 'UI Update':
+        return 'from-emerald-500 to-teal-600';
+      case 'Tax Feature':
+        return 'from-red-500 to-pink-600';
+      default:
+        return 'from-gray-500 to-slate-600';
     }
-  ];
+  };
 
   const totalPages = Math.ceil(allUpdates.length / postsPerPage);
   const startIndex = (currentPage - 1) * postsPerPage;
   const currentUpdates = allUpdates.slice(startIndex, startIndex + postsPerPage);
 
-  const handleUpdateClick = (update: Update) => {
+  const handleUpdateClick = (update: PlatformUpdate) => {
     // Navigate to individual update page (could be implemented later)
     console.log(`Viewing update: ${update.title}`);
   };
@@ -375,7 +259,27 @@ const InvestokidUpdates: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content - Updates Grid */}
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[...Array(9)].map((_, index) => (
+                  <div key={index} className="bg-white rounded-2xl shadow-lg p-6 animate-pulse">
+                    <div className="h-48 bg-gray-200 rounded-xl mb-4"></div>
+                    <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
+                    <div className="flex justify-between">
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                      <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                <h3 className="text-lg font-bold text-red-800 mb-2">Backend Connection Error</h3>
+                <p className="text-red-700">{error}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {currentUpdates.map((update) => {
                 const CategoryIcon = getCategoryIcon(update.category);
                 return (
@@ -394,7 +298,7 @@ const InvestokidUpdates: React.FC = () => {
                     )}
 
                     {/* Update Image */}
-                    <div className={`h-48 bg-gradient-to-br ${update.image} relative overflow-hidden`}>
+                    <div className={`h-48 bg-gradient-to-br ${getUpdateImage(update.category)} relative overflow-hidden`}>
                       <div className="absolute inset-0 bg-black/20"></div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                       <div className="absolute top-4 left-4 flex items-center gap-2">
@@ -402,7 +306,7 @@ const InvestokidUpdates: React.FC = () => {
                           <CategoryIcon className="h-3 w-3" />
                           {update.category}
                         </span>
-                        {update.isNew && (
+                        {update.is_new && (
                           <span className="bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-bold animate-pulse">
                             NEW
                           </span>
@@ -430,9 +334,9 @@ const InvestokidUpdates: React.FC = () => {
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
-                            <span>{update.readTime}</span>
+                            <span>{update.read_time}</span>
                           </div>
-                          <span>{update.date}</span>
+                          <span>{new Date(update.publish_date).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
@@ -440,6 +344,7 @@ const InvestokidUpdates: React.FC = () => {
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -502,7 +407,7 @@ const InvestokidUpdates: React.FC = () => {
                         <span className="text-sm text-gray-700 hover:text-emerald-600 transition-colors line-clamp-2">
                           {update.title}
                         </span>
-                        <div className="text-xs text-gray-500 mt-1">{update.date}</div>
+                        <div className="text-xs text-gray-500 mt-1">{new Date(update.publish_date).toLocaleDateString()}</div>
                       </div>
                     </div>
                   ))}

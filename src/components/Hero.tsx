@@ -6,8 +6,8 @@ import { formatCurrency, formatPercentage } from '../services/marketData';
 const Hero: React.FC = () => {
   // Use the market data hook
   const { data: marketData, loading: marketLoading, error: marketError, lastUpdate } = useMarketData(
-    ['NSEI', 'BSESN', 'NSEBANK'], // Indian market indices
-    60000 // Update every 60 seconds
+    ['NSEI', 'BSESN', 'NSEBANK'] // Indian market indices
+    // No auto-refresh to prevent infinite calls
   );
 
   const [stats, setStats] = useState({

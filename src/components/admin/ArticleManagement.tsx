@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useArticles } from '../../hooks/useArticles';
+import type { Article, ContentBlock } from '../../lib/supabase';
 import { 
   Plus, 
   Search, 
@@ -30,94 +32,17 @@ import {
   Move
 } from 'lucide-react';
 
-interface ContentBlock {
-  id: string;
-  type: 'heading' | 'paragraph' | 'image' | 'video' | 'quote' | 'list' | 'code';
-  content: string;
-  metadata?: {
-    level?: number; // for headings (h1, h2, h3, etc.)
-    alt?: string; // for images
-    caption?: string; // for images/videos
-    url?: string; // for videos/links
-    listType?: 'ordered' | 'unordered'; // for lists
-    language?: string; // for code blocks
-    alignment?: 'left' | 'center' | 'right';
-  };
-}
-
-interface Article {
-  id: number;
-  title: string;
-  excerpt: string;
-  content: string;
-  contentBlocks: ContentBlock[];
-  author: string;
-  category: string;
-  status: 'draft' | 'published' | 'archived';
-  publishDate: string;
-  readTime: string;
-  views: number;
-  tags: string[];
-}
-
 const ArticleManagement: React.FC = () => {
-  const [articles, setArticles] = useState<Article[]>([
-    {
-      id: 1,
-      title: "What is Investing? A Beginner's Complete Guide",
-      excerpt: "Learn the fundamental concepts of investing, why it's important, and how to get started with your first investment.",
-      content: "Investing is the act of allocating money or capital to an endeavor with the expectation of obtaining additional income or profit...",
-      author: "Sarah Johnson",
-      category: "Investment Basics",
-      status: "published",
-      publishDate: "2024-12-15",
-      readTime: "8 min read",
-      views: 12500,
-      tags: ["investing", "beginner", "finance"],
-      contentBlocks: [
-        {
-          id: '1',
-          type: 'heading',
-          content: 'What is Investing?',
-          metadata: { level: 2 }
-        },
-        {
-          id: '2',
-          type: 'paragraph',
-          content: 'Investing is the act of allocating money or capital to an endeavor with the expectation of obtaining additional income or profit...'
-        }
-      ]
-    },
-    {
-      id: 2,
-      title: "Understanding Risk vs Return in Investments",
-      excerpt: "Discover the relationship between investment risk and potential returns, and how to balance them in your portfolio.",
-      content: "The risk-return tradeoff is a fundamental principle in investing...",
-      author: "Michael Chen",
-      category: "Investment Basics",
-      status: "published",
-      publishDate: "2024-12-12",
-      readTime: "6 min read",
-      views: 8900,
-      tags: ["risk", "return", "portfolio"],
-      contentBlocks: []
-    },
-    {
-      id: 3,
-      title: "Technical Analysis Masterclass",
-      excerpt: "Master the art of reading charts and identifying profitable trading opportunities.",
-      content: "Technical analysis is the study of past market data...",
-      author: "Alex Thompson",
-      category: "Technical Analysis",
-      status: "draft",
-      publishDate: "2024-12-20",
-      readTime: "12 min read",
-      views: 0,
-      tags: ["technical", "charts", "trading"],
-      contentBlocks: []
-    }
-  ]);
-
+  // Use backend data
+  const { 
+    articles, 
+    loading, 
+    error, 
+    createArticle, 
+    updateArticle, 
+    deleteArticle 
+  } = useArticles();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -146,18 +71,20 @@ const ArticleManagement: React.FC = () => {
 
   const handleCreateArticle = () => {
     setEditingArticle({
-      id: 0,
+      id: '',
       title: '',
       excerpt: '',
       content: '',
-      contentBlocks: [],
+      content_blocks: [],
       author: '',
       category: categories[0],
       status: 'draft',
-      publishDate: new Date().toISOString().split('T')[0],
-      readTime: '5 min read',
+      publish_date: new Date().toISOString().split('T')[0],
+      read_time: '5 min read',
       views: 0,
-      tags: []
+      tags: [],
+      created_at: '',
+      updated_at: ''
     });
     setShowModal(true);
   };
@@ -176,7 +103,7 @@ const ArticleManagement: React.FC = () => {
     
     setEditingArticle({
       ...editingArticle,
-      contentBlocks: [...editingArticle.contentBlocks, newBlock]
+      content_blocks: [...editingArticle.content_blocks, newBlock]
     });
   };
 
@@ -185,7 +112,7 @@ const ArticleManagement: React.FC = () => {
     
     setEditingArticle({
       ...editingArticle,
-      contentBlocks: editingArticle.contentBlocks.map(block =>
+      content_blocks: editingArticle.content_blocks.map(block =>
         block.id === blockId ? { ...block, ...updates } : block
       )
     });
@@ -196,14 +123,14 @@ const ArticleManagement: React.FC = () => {
     
     setEditingArticle({
       ...editingArticle,
-      contentBlocks: editingArticle.contentBlocks.filter(block => block.id !== blockId)
+      content_blocks: editingArticle.content_blocks.filter(block => block.id !== blockId)
     });
   };
 
   const moveContentBlock = (blockId: string, direction: 'up' | 'down') => {
     if (!editingArticle) return;
     
-    const blocks = [...editingArticle.contentBlocks];
+    const blocks = [...editingArticle.content_blocks];
     const index = blocks.findIndex(block => block.id === blockId);
     
     if (direction === 'up' && index > 0) {
@@ -214,7 +141,7 @@ const ArticleManagement: React.FC = () => {
     
     setEditingArticle({
       ...editingArticle,
-      contentBlocks: blocks
+      content_blocks: blocks
     });
   };
 
@@ -245,14 +172,14 @@ const ArticleManagement: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => moveContentBlock(block.id, 'up')}
-              disabled={index === 0}
+              disabled={index === 0 || !editingArticle}
               className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
             >
               <ChevronUp className="h-4 w-4" />
             </button>
             <button
               onClick={() => moveContentBlock(block.id, 'down')}
-              disabled={index === editingArticle!.contentBlocks.length - 1}
+              disabled={!editingArticle || index === editingArticle.content_blocks.length - 1}
               className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
             >
               <ChevronDown className="h-4 w-4" />
@@ -484,32 +411,47 @@ const ArticleManagement: React.FC = () => {
   const handleSaveArticle = () => {
     if (!editingArticle) return;
 
-    if (editingArticle.id === 0) {
+    if (editingArticle.id === '') {
       // Create new article
-      const newArticle = {
-        ...editingArticle,
-        id: Math.max(...articles.map(a => a.id)) + 1
-      };
-      setArticles([newArticle, ...articles]);
+      const { id, created_at, updated_at, ...articleData } = editingArticle;
+      createArticle(articleData).then(() => {
+        setShowModal(false);
+        setEditingArticle(null);
+      }).catch(err => {
+        console.error('Error creating article:', err);
+        alert('Error creating article. Please try again.');
+      });
     } else {
       // Update existing article
-      setArticles(articles.map(a => a.id === editingArticle.id ? editingArticle : a));
+      const { created_at, updated_at, ...updates } = editingArticle;
+      updateArticle(editingArticle.id, updates).then(() => {
+        setShowModal(false);
+        setEditingArticle(null);
+      }).catch(err => {
+        console.error('Error updating article:', err);
+        alert('Error updating article. Please try again.');
+      });
     }
-
-    setShowModal(false);
-    setEditingArticle(null);
   };
 
-  const handleDeleteArticle = (id: number) => {
+  const handleDeleteArticle = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this article?')) {
-      setArticles(articles.filter(a => a.id !== id));
+      try {
+        await deleteArticle(id);
+      } catch (err) {
+        console.error('Error deleting article:', err);
+        alert('Error deleting article. Please try again.');
+      }
     }
   };
 
-  const handleStatusChange = (id: number, newStatus: Article['status']) => {
-    setArticles(articles.map(a => 
-      a.id === id ? { ...a, status: newStatus } : a
-    ));
+  const handleStatusChange = async (id: string, newStatus: Article['status']) => {
+    try {
+      await updateArticle(id, { status: newStatus });
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Error updating status. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -524,6 +466,21 @@ const ArticleManagement: React.FC = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Show error message if backend fails
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-red-800 mb-2">Backend Connection Error</h2>
+          <p className="text-red-700 mb-4">{error}</p>
+          <p className="text-sm text-red-600">
+            Please ensure Supabase is connected and the database is set up properly.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -541,6 +498,13 @@ const ArticleManagement: React.FC = () => {
           Create Article
         </button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-red-800 font-medium">Error: {error}</p>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -629,84 +593,91 @@ const ArticleManagement: React.FC = () => {
 
       {/* Articles Table */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Article</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Author</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Views</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentArticles.map((article) => (
-                <tr key={article.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 line-clamp-1">{article.title}</div>
-                      <div className="text-sm text-gray-500 line-clamp-2">{article.excerpt}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">{article.readTime}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">{article.author}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900">{article.category}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <select
-                      value={article.status}
-                      onChange={(e) => handleStatusChange(article.id, e.target.value as Article['status'])}
-                      className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(article.status)}`}
-                    >
-                      {statuses.map(status => (
-                        <option key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900">{article.views.toLocaleString()}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(article.publishDate).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEditArticle(article)}
-                        className="text-blue-600 hover:text-blue-800 p-1"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteArticle(article.id)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading articles from database...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Article</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Author</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Views</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentArticles.map((article) => (
+                  <tr key={article.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 line-clamp-1">{article.title}</div>
+                        <div className="text-sm text-gray-500 line-clamp-2">{article.excerpt}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock className="h-3 w-3 text-gray-400" />
+                          <span className="text-xs text-gray-500">{article.read_time}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-900">{article.author}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-900">{article.category}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={article.status}
+                        onChange={(e) => handleStatusChange(article.id, e.target.value as Article['status'])}
+                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(article.status)}`}
+                      >
+                        {statuses.map(status => (
+                          <option key={status} value={status}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-900">{article.views.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(article.publish_date).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditArticle(article)}
+                          className="text-blue-600 hover:text-blue-800 p-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteArticle(article.id)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -754,7 +725,7 @@ const ArticleManagement: React.FC = () => {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {editingArticle.id === 0 ? 'Create New Article' : 'Edit Article'}
+                  {editingArticle.id === '' ? 'Create New Article' : 'Edit Article'}
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
@@ -807,7 +778,7 @@ const ArticleManagement: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <label className="block text-sm font-medium text-gray-700">Rich Content Builder</label>
                   <div className="text-xs text-gray-500">
-                    {editingArticle.contentBlocks.length} content blocks
+                    {editingArticle.content_blocks.length} content blocks
                   </div>
                 </div>
                 
@@ -840,13 +811,13 @@ const ArticleManagement: React.FC = () => {
 
                 {/* Content Blocks */}
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {editingArticle.contentBlocks.length === 0 ? (
+                  {editingArticle.content_blocks.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <Type className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                       <p className="text-sm">No content blocks yet. Add your first block above!</p>
                     </div>
                   ) : (
-                    editingArticle.contentBlocks.map((block, index) => 
+                    editingArticle.content_blocks.map((block, index) => 
                       renderContentBlockEditor(block, index)
                     )
                   )}
@@ -898,8 +869,8 @@ const ArticleManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
                   <input
                     type="date"
-                    value={editingArticle.publishDate}
-                    onChange={(e) => setEditingArticle({ ...editingArticle, publishDate: e.target.value })}
+                    value={editingArticle.publish_date}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, publish_date: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -910,10 +881,25 @@ const ArticleManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Read Time</label>
                 <input
                   type="text"
-                  value={editingArticle.readTime}
-                  onChange={(e) => setEditingArticle({ ...editingArticle, readTime: e.target.value })}
+                  value={editingArticle.read_time}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, read_time: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., 5 min read"
+                />
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                <input
+                  type="text"
+                  value={editingArticle.tags.join(', ')}
+                  onChange={(e) => setEditingArticle({ 
+                    ...editingArticle, 
+                    tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                  })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., investing, beginner, finance"
                 />
               </div>
             </div>
@@ -930,7 +916,7 @@ const ArticleManagement: React.FC = () => {
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
-                {editingArticle.id === 0 ? 'Create Article' : 'Save Changes'}
+                {editingArticle.id === '' ? 'Create Article' : 'Save Changes'}
               </button>
             </div>
           </div>

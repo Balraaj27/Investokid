@@ -1,4 +1,8 @@
 import React from 'react';
+import { useArticles } from '../../hooks/useArticles';
+import { useNews } from '../../hooks/useNews';
+import { useUsers } from '../../hooks/useUsers';
+import { usePlatformUpdates } from '../../hooks/usePlatformUpdates';
 import { 
   Users, 
   FileText, 
@@ -11,10 +15,21 @@ import {
 } from 'lucide-react';
 
 const DashboardOverview: React.FC = () => {
+  // Use backend data
+  const { articles } = useArticles();
+  const { news } = useNews();
+  const { users } = useUsers();
+  const { updates } = usePlatformUpdates();
+
+  // Calculate real stats from backend data
+  const totalViews = articles.reduce((sum, article) => sum + article.views, 0) +
+                    news.reduce((sum, item) => sum + item.views, 0) +
+                    updates.reduce((sum, update) => sum + update.views, 0);
+
   const stats = [
     {
       title: 'Total Users',
-      value: '12,543',
+      value: users.length.toLocaleString(),
       change: '+12.5%',
       trend: 'up',
       icon: Users,
@@ -22,7 +37,7 @@ const DashboardOverview: React.FC = () => {
     },
     {
       title: 'Published Articles',
-      value: '1,247',
+      value: articles.filter(a => a.status === 'published').length.toString(),
       change: '+8.2%',
       trend: 'up',
       icon: FileText,
@@ -30,7 +45,7 @@ const DashboardOverview: React.FC = () => {
     },
     {
       title: 'News Items',
-      value: '3,891',
+      value: news.filter(n => n.status === 'active' || n.status === 'featured').length.toString(),
       change: '+15.3%',
       trend: 'up',
       icon: Newspaper,
@@ -38,7 +53,7 @@ const DashboardOverview: React.FC = () => {
     },
     {
       title: 'Page Views',
-      value: '89.2K',
+      value: totalViews > 1000 ? `${Math.floor(totalViews / 1000)}K` : totalViews.toString(),
       change: '-2.1%',
       trend: 'down',
       icon: Eye,
@@ -46,56 +61,39 @@ const DashboardOverview: React.FC = () => {
     }
   ];
 
-  const recentArticles = [
-    {
-      title: 'Understanding Market Volatility in 2024',
-      author: 'Sarah Johnson',
-      date: '2 hours ago',
-      status: 'Published',
-      views: '1.2K'
-    },
-    {
-      title: 'Cryptocurrency Investment Strategies',
-      author: 'Mike Chen',
-      date: '5 hours ago',
-      status: 'Draft',
-      views: '0'
-    },
-    {
-      title: 'Technical Analysis for Beginners',
-      author: 'Alex Thompson',
-      date: '1 day ago',
-      status: 'Published',
-      views: '2.8K'
-    }
-  ];
+  // Get recent articles from backend
+  const recentArticles = articles
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 3)
+    .map(article => ({
+      title: article.title,
+      author: article.author,
+      date: new Date(article.updated_at).toLocaleDateString(),
+      status: article.status.charAt(0).toUpperCase() + article.status.slice(1),
+      views: article.views > 1000 ? `${(article.views / 1000).toFixed(1)}K` : article.views.toString()
+    }));
 
+  // Generate recent activity from backend data
   const recentActivity = [
-    {
+    ...users.slice(0, 2).map(user => ({
       action: 'New user registered',
-      user: 'john.doe@email.com',
-      time: '5 minutes ago',
+      user: user.email,
+      time: new Date(user.created_at).toLocaleDateString(),
       type: 'user'
-    },
-    {
+    })),
+    ...articles.filter(a => a.status === 'published').slice(0, 2).map(article => ({
       action: 'Article published',
-      user: 'Sarah Johnson',
-      time: '2 hours ago',
+      user: article.author,
+      time: new Date(article.updated_at).toLocaleDateString(),
       type: 'content'
-    },
-    {
-      action: 'Comment posted',
-      user: 'Mike Wilson',
-      time: '3 hours ago',
-      type: 'engagement'
-    },
-    {
+    })),
+    ...news.slice(0, 1).map(item => ({
       action: 'News item updated',
-      user: 'Admin',
-      time: '5 hours ago',
+      user: item.author,
+      time: new Date(item.updated_at).toLocaleDateString(),
       type: 'news'
-    }
-  ];
+    }))
+  ].slice(0, 4);
 
   return (
     <div className="space-y-6">

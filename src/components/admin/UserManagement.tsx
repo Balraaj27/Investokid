@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useUsers } from '../../hooks/useUsers';
+import type { PlatformUser } from '../../lib/supabase';
 import { 
   Plus, 
   Search, 
@@ -17,77 +19,16 @@ import {
   CheckCircle
 } from 'lucide-react';
 
-interface UserData {
-  id: number;
-  name: string;
-  email: string;
-  role: 'admin' | 'editor' | 'user' | 'subscriber';
-  status: 'active' | 'inactive' | 'banned';
-  joinDate: string;
-  lastLogin: string;
-  articlesRead: number;
-  subscriptionType: 'free' | 'premium' | 'pro';
-  avatar?: string;
-}
-
 const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<UserData[]>([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john.doe@email.com",
-      role: "user",
-      status: "active",
-      joinDate: "2024-01-15",
-      lastLogin: "2024-12-15",
-      articlesRead: 45,
-      subscriptionType: "premium"
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      email: "sarah.johnson@email.com",
-      role: "editor",
-      status: "active",
-      joinDate: "2023-11-20",
-      lastLogin: "2024-12-14",
-      articlesRead: 120,
-      subscriptionType: "pro"
-    },
-    {
-      id: 3,
-      name: "Mike Wilson",
-      email: "mike.wilson@email.com",
-      role: "user",
-      status: "inactive",
-      joinDate: "2024-03-10",
-      lastLogin: "2024-11-28",
-      articlesRead: 23,
-      subscriptionType: "free"
-    },
-    {
-      id: 4,
-      name: "Emily Davis",
-      email: "emily.davis@email.com",
-      role: "admin",
-      status: "active",
-      joinDate: "2023-08-05",
-      lastLogin: "2024-12-15",
-      articlesRead: 200,
-      subscriptionType: "pro"
-    },
-    {
-      id: 5,
-      name: "Alex Thompson",
-      email: "alex.thompson@email.com",
-      role: "subscriber",
-      status: "banned",
-      joinDate: "2024-06-12",
-      lastLogin: "2024-10-15",
-      articlesRead: 8,
-      subscriptionType: "free"
-    }
-  ]);
+  // Use backend data
+  const { 
+    users, 
+    loading, 
+    error, 
+    createUser, 
+    updateUser, 
+    deleteUser 
+  } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -120,15 +61,17 @@ const UserManagement: React.FC = () => {
 
   const handleCreateUser = () => {
     setEditingUser({
-      id: 0,
+      id: '',
       name: '',
       email: '',
       role: 'user',
       status: 'active',
-      joinDate: new Date().toISOString().split('T')[0],
-      lastLogin: new Date().toISOString().split('T')[0],
-      articlesRead: 0,
-      subscriptionType: 'free'
+      join_date: new Date().toISOString().split('T')[0],
+      last_login: new Date().toISOString(),
+      articles_read: 0,
+      subscription_type: 'free',
+      created_at: '',
+      updated_at: ''
     });
     setShowModal(true);
   };
@@ -141,32 +84,47 @@ const UserManagement: React.FC = () => {
   const handleSaveUser = () => {
     if (!editingUser) return;
 
-    if (editingUser.id === 0) {
+    if (editingUser.id === '') {
       // Create new user
-      const newUser = {
-        ...editingUser,
-        id: Math.max(...users.map(u => u.id)) + 1
-      };
-      setUsers([newUser, ...users]);
+      const { id, created_at, updated_at, ...userData } = editingUser;
+      createUser(userData).then(() => {
+        setShowModal(false);
+        setEditingUser(null);
+      }).catch(err => {
+        console.error('Error creating user:', err);
+        alert('Error creating user. Please try again.');
+      });
     } else {
       // Update existing user
-      setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));
+      const { created_at, updated_at, ...updates } = editingUser;
+      updateUser(editingUser.id, updates).then(() => {
+        setShowModal(false);
+        setEditingUser(null);
+      }).catch(err => {
+        console.error('Error updating user:', err);
+        alert('Error updating user. Please try again.');
+      });
     }
-
-    setShowModal(false);
-    setEditingUser(null);
   };
 
-  const handleDeleteUser = (id: number) => {
+  const handleDeleteUser = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== id));
+      try {
+        await deleteUser(id);
+      } catch (err) {
+        console.error('Error deleting user:', err);
+        alert('Error deleting user. Please try again.');
+      }
     }
   };
 
-  const handleStatusChange = (id: number, newStatus: UserData['status']) => {
-    setUsers(users.map(u => 
-      u.id === id ? { ...u, status: newStatus } : u
-    ));
+  const handleStatusChange = async (id: string, newStatus: PlatformUser['status']) => {
+    try {
+      await updateUser(id, { status: newStatus });
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Error updating status. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -251,7 +209,7 @@ const UserManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Premium Users</p>
-              <p className="text-3xl font-bold text-purple-600">{users.filter(u => u.subscriptionType === 'premium' || u.subscriptionType === 'pro').length}</p>
+              <p className="text-3xl font-bold text-purple-600">{users.filter(u => u.subscription_type === 'premium' || u.subscription_type === 'pro').length}</p>
             </div>
             <Shield className="h-8 w-8 text-purple-600" />
           </div>
@@ -260,7 +218,7 @@ const UserManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Reads</p>
-              <p className="text-3xl font-bold text-orange-600">{users.reduce((sum, u) => sum + u.articlesRead, 0)}</p>
+              <p className="text-3xl font-bold text-orange-600">{users.reduce((sum, u) => sum + u.articles_read, 0)}</p>
             </div>
             <Eye className="h-8 w-8 text-orange-600" />
           </div>
@@ -368,7 +326,7 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <select
                       value={user.status}
-                      onChange={(e) => handleStatusChange(user.id, e.target.value as UserData['status'])}
+                      onChange={(e) => handleStatusChange(user.id, e.target.value as PlatformUser['status'])}
                       className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(user.status)}`}
                     >
                       {statuses.map(status => (
@@ -379,20 +337,20 @@ const UserManagement: React.FC = () => {
                     </select>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSubscriptionColor(user.subscriptionType)}`}>
-                      {user.subscriptionType.charAt(0).toUpperCase() + user.subscriptionType.slice(1)}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSubscriptionColor(user.subscription_type)}`}>
+                      {user.subscription_type.charAt(0).toUpperCase() + user.subscription_type.slice(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">{user.articlesRead}</span>
+                      <span className="text-sm text-gray-900">{user.articles_read}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1 text-sm text-gray-500">
                       <Calendar className="h-3 w-3" />
-                      {new Date(user.lastLogin).toLocaleDateString()}
+                      {new Date(user.last_login).toLocaleDateString()}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -540,8 +498,8 @@ const UserManagement: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Subscription Type</label>
                   <select
-                    value={editingUser.subscriptionType}
-                    onChange={(e) => setEditingUser({ ...editingUser, subscriptionType: e.target.value as UserData['subscriptionType'] })}
+                    value={editingUser.subscription_type}
+                    onChange={(e) => setEditingUser({ ...editingUser, subscription_type: e.target.value as PlatformUser['subscription_type'] })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {subscriptionTypes.map(type => (
@@ -556,8 +514,8 @@ const UserManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Join Date</label>
                   <input
                     type="date"
-                    value={editingUser.joinDate}
-                    onChange={(e) => setEditingUser({ ...editingUser, joinDate: e.target.value })}
+                    value={editingUser.join_date}
+                    onChange={(e) => setEditingUser({ ...editingUser, join_date: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -576,7 +534,7 @@ const UserManagement: React.FC = () => {
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
-                {editingUser.id === 0 ? 'Add User' : 'Save Changes'}
+                {editingUser.id === '' ? 'Add User' : 'Save Changes'}
               </button>
             </div>
           </div>

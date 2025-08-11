@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, BarChart3, Calculator, Coins, ArrowRight, BookOpen, TrendingUp, Shield, PieChart, Users, Award, Clock, Star, Zap, Target, Calendar } from 'lucide-react';
+import { useArticles } from '../hooks/useArticles';
+import { usePlatformUpdates } from '../hooks/usePlatformUpdates';
+import type { Article } from '../lib/supabase';
+
+interface CategoryData {
+  id: string;
+  name: string;
+  icon: any;
+  description: string;
+  color: string;
+  path: string;
+  level: string;
+  articles: Article[];
+}
 
 const Learnings: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +26,13 @@ const Learnings: React.FC = () => {
     articles: 0,
     views: 0,
     shares: 0
+  });
+
+  // Use backend data hooks
+  const { articles, loading, error: articlesError } = useArticles({ status: 'published' });
+  const { updates: platformUpdates, loading: updatesLoading } = usePlatformUpdates({ 
+    status: 'published', 
+    limit: 3 
   });
 
   // Animate stats on mount
@@ -32,95 +53,152 @@ const Learnings: React.FC = () => {
 
     const timer = setTimeout(() => {
       animateCounter(250000, 'readers');
-      animateCounter(500, 'articles');
-      animateCounter(2500000, 'views');
+      animateCounter(articles.length, 'articles');
+      animateCounter(articles.reduce((sum, article) => sum + article.views, 0), 'views');
       animateCounter(150000, 'shares');
     }, 500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [articles]);
 
+  // Group articles by category
+  const getArticlesByCategory = (category: string): Article[] => {
+    return articles.filter(article => 
+      article.status === 'published' && 
+      article.category === category
+    );
+  };
+
+  // Get category statistics
+  const getCategoryStats = (category: string) => {
+    const categoryArticles = getArticlesByCategory(category);
+    return {
+      count: categoryArticles.length,
+      totalViews: categoryArticles.reduce((sum, article) => sum + article.views, 0),
+      avgReadTime: categoryArticles.length > 0 
+        ? Math.round(categoryArticles.reduce((sum, article) => {
+            const time = parseInt(article.read_time.split(' ')[0]);
+            return sum + time;
+          }, 0) / categoryArticles.length)
+        : 0,
+      latestUpdate: categoryArticles.length > 0
+        ? new Date(Math.max(...categoryArticles.map(a => new Date(a.publish_date).getTime())))
+        : new Date()
+    };
+  };
+
+  // Get recent topics for a category
+  const getRecentTopics = (category: string): string[] => {
+    return getArticlesByCategory(category)
+      .sort((a, b) => new Date(b.publish_date).getTime() - new Date(a.publish_date).getTime())
+      .slice(0, 4)
+      .map(article => article.title);
+  };
+
+  // Dynamic categories based on backend data
   const categories = [
-    { id: 'all', name: 'All Articles', icon: BookOpen, count: 500 },
-    { id: 'basics', name: 'Investment Basics', icon: GraduationCap, count: 150 },
-    { id: 'analysis', name: 'Technical Analysis', icon: BarChart3, count: 120 },
-    { id: 'planning', name: 'Financial Planning', icon: Calculator, count: 130 },
-    { id: 'crypto', name: 'Cryptocurrency', icon: Coins, count: 100 }
+    { 
+      id: 'all', 
+      name: 'All Articles', 
+      icon: BookOpen, 
+      count: articles.filter(a => a.status === 'published').length 
+    },
+    { 
+      id: 'basics', 
+      name: 'Investment Basics', 
+      icon: GraduationCap, 
+      count: getArticlesByCategory('Investment Basics').length 
+    },
+    { 
+      id: 'analysis', 
+      name: 'Technical Analysis', 
+      icon: BarChart3, 
+      count: getArticlesByCategory('Technical Analysis').length 
+    },
+    { 
+      id: 'planning', 
+      name: 'Financial Planning', 
+      icon: Calculator, 
+      count: getArticlesByCategory('Financial Planning').length 
+    },
+    { 
+      id: 'crypto', 
+      name: 'Cryptocurrency', 
+      icon: Coins, 
+      count: getArticlesByCategory('Cryptocurrency').length 
+    }
   ];
 
-  const learningCards = [
+  // Dynamic learning cards based on backend data
+  const learningCards: CategoryData[] = [
     {
-      id: 1,
+      id: 'basics',
       icon: GraduationCap,
       title: 'Investment Basics',
       subtitle: 'Essential Knowledge Hub',
       description: 'Comprehensive articles covering investment fundamentals, risk management, and portfolio building strategies.',
       color: 'from-blue-600 via-indigo-600 to-purple-700',
       path: '/investment-basics',
-      category: 'basics',
       level: 'Beginner Friendly',
-      readTime: '5-8 min reads',
-      articles: 150,
-      readers: '125K',
+      readTime: `${getCategoryStats('Investment Basics').avgReadTime || 6} min avg`,
+      articles: getCategoryStats('Investment Basics').count,
+      readers: `${Math.floor(getCategoryStats('Investment Basics').totalViews / 1000)}K`,
       engagement: '4.9★',
       features: ['Risk Assessment', 'Portfolio Building', 'Market Analysis', 'Investment Strategies'],
-      recentTopics: ['What is Investing?', 'Risk vs Return', 'Diversification', 'Common Mistakes']
+      recentTopics: getRecentTopics('Investment Basics').slice(0, 4)
     },
     {
-      id: 2,
+      id: 'analysis',
       icon: BarChart3,
       title: 'Technical Analysis',
       subtitle: 'Advanced Trading Insights',
       description: 'In-depth articles on chart patterns, technical indicators, and professional trading strategies.',
       color: 'from-emerald-600 via-teal-600 to-cyan-700',
       path: '/technical-analysis',
-      category: 'analysis',
       level: 'Advanced',
-      readTime: '8-12 min reads',
-      articles: 120,
-      readers: '87K',
+      readTime: `${getCategoryStats('Technical Analysis').avgReadTime || 10} min avg`,
+      articles: getCategoryStats('Technical Analysis').count,
+      readers: `${Math.floor(getCategoryStats('Technical Analysis').totalViews / 1000)}K`,
       engagement: '4.8★',
       features: ['Chart Patterns', 'Technical Indicators', 'Trading Signals', 'Risk Management'],
-      recentTopics: ['Candlestick Patterns', 'Moving Averages', 'RSI & MACD', 'Support & Resistance']
+      recentTopics: getRecentTopics('Technical Analysis').slice(0, 4)
     },
     {
-      id: 3,
+      id: 'planning',
       icon: Calculator,
       title: 'Financial Planning',
       subtitle: 'Life Planning Guides',
       description: 'Expert articles on budgeting, retirement planning, and comprehensive wealth building strategies.',
       color: 'from-orange-600 via-red-600 to-pink-700',
       path: '/financial-planning',
-      category: 'planning',
       level: 'Practical',
-      readTime: '7-10 min reads',
-      articles: 130,
-      readers: '152K',
+      readTime: `${getCategoryStats('Financial Planning').avgReadTime || 8} min avg`,
+      articles: getCategoryStats('Financial Planning').count,
+      readers: `${Math.floor(getCategoryStats('Financial Planning').totalViews / 1000)}K`,
       engagement: '4.9★',
       features: ['Budgeting', 'Retirement Planning', 'Tax Optimization', 'Estate Planning'],
-      recentTopics: ['Emergency Fund', 'Retirement Planning', 'Tax Strategies', 'Estate Planning']
+      recentTopics: getRecentTopics('Financial Planning').slice(0, 4)
     },
     {
-      id: 4,
+      id: 'crypto',
       icon: Coins,
       title: 'Cryptocurrency',
       subtitle: 'Digital Asset Insights',
       description: 'Latest articles on blockchain technology, digital assets, and cryptocurrency investment strategies.',
       color: 'from-violet-600 via-purple-600 to-fuchsia-700',
       path: '/cryptocurrency',
-      category: 'crypto',
       level: 'Emerging Tech',
-      readTime: '6-9 min reads',
-      articles: 100,
-      readers: '98K',
+      readTime: `${getCategoryStats('Cryptocurrency').avgReadTime || 9} min avg`,
+      articles: getCategoryStats('Cryptocurrency').count,
+      readers: `${Math.floor(getCategoryStats('Cryptocurrency').totalViews / 1000)}K`,
       engagement: '4.7★',
       features: ['Blockchain Tech', 'DeFi Protocols', 'NFT Markets', 'Crypto Trading'],
-      recentTopics: ['Bitcoin Basics', 'Ethereum Guide', 'DeFi Explained', 'Crypto Security']
+      recentTopics: getRecentTopics('Cryptocurrency').slice(0, 4)
     }
   ];
 
   const filteredCards = learningCards.filter(card => {
-    const matchesCategory = activeCategory === 'all' || card.category === activeCategory;
+    const matchesCategory = activeCategory === 'all' || card.id === activeCategory;
     const matchesSearch = searchTerm === '' || 
       card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       card.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -128,7 +206,7 @@ const Learnings: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  const handleStartLearning = (card: typeof learningCards[0]) => {
+  const handleStartLearning = (card: CategoryData) => {
     if (card.path) {
       navigate(card.path);
     }
@@ -273,11 +351,35 @@ const Learnings: React.FC = () => {
         )}
 
         {/* Learning Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/50 animate-pulse">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-16 h-16 bg-gray-200 rounded-2xl"></div>
+                  <div className="w-20 h-6 bg-gray-200 rounded-full"></div>
+                </div>
+                <div className="mb-6">
+                  <div className="h-8 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-3 w-3/4"></div>
+                  <div className="h-16 bg-gray-200 rounded"></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-12 bg-gray-200 rounded-2xl"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {filteredCards.map((card, index) => (
             <div
               key={card.id}
-              onMouseEnter={() => setHoveredCard(card.id)}
+              onMouseEnter={() => setHoveredCard(index)}
               onMouseLeave={() => setHoveredCard(null)}
               className="group relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-4 hover:scale-105 border border-white/50 overflow-hidden"
               style={{
@@ -337,17 +439,28 @@ const Learnings: React.FC = () => {
                 <div className="mb-6">
                   <h4 className="text-sm font-semibold text-slate-700 mb-3">Recent Topics:</h4>
                   <div className="flex flex-wrap gap-2">
-                    {card.recentTopics.slice(0, 2).map((topic, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium hover:bg-slate-200 transition-colors cursor-pointer"
-                      >
-                        {topic}
+                    {card.recentTopics.length > 0 ? (
+                      <>
+                        {card.recentTopics.slice(0, 2).map((topic, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium hover:bg-slate-200 transition-colors cursor-pointer line-clamp-1"
+                            title={topic}
+                          >
+                            {topic.length > 20 ? topic.substring(0, 20) + '...' : topic}
+                          </span>
+                        ))}
+                        {card.recentTopics.length > 2 && (
+                          <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium">
+                            +{card.recentTopics.length - 2} more
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-lg font-medium">
+                        No articles yet
                       </span>
-                    ))}
-                    <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium">
-                      +{card.recentTopics.length - 2} more
-                    </span>
+                    )}
                   </div>
                 </div>
                 {/* Features */}
@@ -378,12 +491,13 @@ const Learnings: React.FC = () => {
               </div>
 
               {/* Hover Effect Overlay */}
-              {hoveredCard === card.id && (
+              {hoveredCard === index && (
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-3xl pointer-events-none"></div>
               )}
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* No Results Message */}
         {filteredCards.length === 0 && (
@@ -418,27 +532,27 @@ const Learnings: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
               <div className="group">
                 <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300">
-                  250K+
+                  {stats.readers >= 250000 ? '250K+' : `${Math.floor(stats.readers / 1000)}K`}
                 </div>
                 <div className="text-slate-300 font-medium">Monthly Readers</div>
               </div>
               <div className="group">
                 <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300">
-                  500+
+                  {stats.articles}
                 </div>
                 <div className="text-slate-300 font-medium">Expert Articles</div>
               </div>
               <div className="group">
                 <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300">
-                  2.5M+
+                  {stats.views >= 1000000 ? `${Math.floor(stats.views / 1000000)}M` : `${Math.floor(stats.views / 1000)}K`}
                 </div>
                 <div className="text-slate-300 font-medium">Article Views</div>
               </div>
               <div className="group">
                 <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300">
-                  4.8★
+                  {stats.shares >= 150000 ? '150K' : `${Math.floor(stats.shares / 1000)}K`}
                 </div>
-                <div className="text-slate-300 font-medium">Reader Rating</div>
+                <div className="text-slate-300 font-medium">Article Shares</div>
               </div>
             </div>
 
@@ -494,45 +608,44 @@ const Learnings: React.FC = () => {
 
         {/* Latest Updates Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          {[
-            {
-              id: 1,
-              title: "New Advanced Portfolio Analytics Dashboard",
-              excerpt: "Introducing comprehensive portfolio analysis tools with risk metrics, performance tracking, and detailed asset allocation insights.",
-              date: "Dec 18, 2024",
-              readTime: "3 min read",
-              category: "Feature Release",
-              image: "from-blue-500 to-purple-600",
-              isNew: true
-            },
-            {
-              id: 2,
-              title: "Enhanced Mobile App Experience",
-              excerpt: "Redesigned mobile interface with improved navigation, faster loading times, and new touch-friendly financial calculators.",
-              date: "Dec 15, 2024",
-              readTime: "2 min read",
-              category: "App Update",
-              image: "from-green-500 to-teal-600",
-              isNew: true
-            },
-            {
-              id: 3,
-              title: "Real-time Market Data Integration",
-              excerpt: "Now featuring live market data from NSE and BSE with real-time price updates and advanced charting capabilities.",
-              date: "Dec 12, 2024",
-              readTime: "4 min read",
-              category: "Platform Enhancement",
-              image: "from-orange-500 to-red-600",
-              isNew: false
-            }
-          ].map((update) => (
+          {updatesLoading ? (
+            // Loading skeleton
+            [...Array(3)].map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl shadow-lg p-6 animate-pulse">
+                <div className="h-48 bg-gray-200 rounded-xl mb-4"></div>
+                <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
+                <div className="flex justify-between">
+                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                </div>
+              </div>
+            ))
+          ) : (
+            platformUpdates.slice(0, 3).map((update) => {
+              const getUpdateImage = (category: string) => {
+                switch (category) {
+                  case 'Feature Release':
+                    return 'from-blue-500 to-purple-600';
+                  case 'App Update':
+                    return 'from-green-500 to-teal-600';
+                  case 'Platform Enhancement':
+                    return 'from-orange-500 to-red-600';
+                  case 'Security Update':
+                    return 'from-red-500 to-pink-600';
+                  default:
+                    return 'from-gray-500 to-slate-600';
+                }
+              };
+
+              return (
             <article
               key={update.id}
               onClick={() => navigate('/investokid-updates')}
               className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer overflow-hidden border border-gray-100"
             >
               {/* Update Image */}
-              <div className={`h-48 bg-gradient-to-br ${update.image} relative overflow-hidden`}>
+              <div className={`h-48 bg-gradient-to-br ${getUpdateImage(update.category)} relative overflow-hidden`}>
                 <div className="absolute inset-0 bg-black/20"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                 <div className="absolute top-4 left-4 flex items-center gap-2">
@@ -562,16 +675,18 @@ const Learnings: React.FC = () => {
                 <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>{update.date}</span>
+                    <span>{new Date(update.publish_date).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{update.readTime}</span>
+                    <span>{update.read_time}</span>
                   </div>
                 </div>
               </div>
             </article>
-          ))}
+              );
+            })
+          )}
         </div>
 
         {/* Discover More Button */}

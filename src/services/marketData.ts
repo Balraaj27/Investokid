@@ -54,6 +54,8 @@ export const fetchMarketDataAlphaVantage = async (symbols: string[]): Promise<Ma
         apiUrl = `${ALPHA_VANTAGE_BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
       }
       
+      console.log(`🌐 Fetching ${symbol} from:`, apiUrl);
+      
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -69,6 +71,7 @@ export const fetchMarketDataAlphaVantage = async (symbols: string[]): Promise<Ma
       }
       
       const data = await response.json();
+      console.log(`📈 API Response for ${symbol}:`, data);
       
       // Check for API error messages
       if (data['Error Message'] || data['Note']) {
@@ -115,6 +118,7 @@ export const fetchMarketDataAlphaVantage = async (symbols: string[]): Promise<Ma
       
       // Rate limiting - wait 12 seconds between calls for free tier
       if (symbols.indexOf(symbol) < symbols.length - 1) {
+        console.log(`⏳ Waiting 12 seconds before next API call (rate limiting)...`);
         await new Promise(resolve => setTimeout(resolve, 12000));
       }
     } catch (error) {
@@ -134,6 +138,7 @@ export const fetchMarketDataAlphaVantage = async (symbols: string[]): Promise<Ma
     }
   }
   
+  console.log('✅ fetchMarketDataAlphaVantage completed, returning:', results.length, 'items');
   return results;
 };
 
@@ -261,38 +266,24 @@ export const fetchIndianMarketData = async (symbols: string[]): Promise<MarketDa
 
 // Main function to fetch market data (choose your preferred method)
 export const fetchMarketData = async (symbols: string[]): Promise<MarketData[]> => {
+  console.log('🔄 fetchMarketData called for symbols:', symbols, 'at', new Date().toLocaleTimeString());
+  
   try {
-    // Try Alpha Vantage first
-    console.log('Attempting to fetch live market data...');
-    const result = await fetchMarketDataAlphaVantage(symbols);
-    
-    // Check if we got valid data (not all mock data)
-    const hasRealData = result.some(item => {
-      const isRealisticPrice = 
-        (item.symbol === 'NSEI' && item.price > 15000 && item.price < 25000) ||
-        (item.symbol === 'BSESN' && item.price > 50000 && item.price < 80000) ||
-        (item.symbol === 'NSEBANK' && item.price > 35000 && item.price < 55000);
-      return isRealisticPrice;
-    });
-    
-    if (hasRealData) {
-      console.log('Successfully fetched live market data');
-      return result;
-    } else {
-      console.log('API returned mock data, using enhanced mock data');
-      throw new Error('API returned mock data');
-    }
+    // DISABLED: Alpha Vantage API to prevent infinite calls
+    console.log('⚠️ Alpha Vantage API disabled to prevent infinite calls');
+    throw new Error('API disabled - using mock data');
   } catch (error) {
-    console.warn('Live API failed, using realistic mock data:', error.message);
+    console.warn('🔄 Using realistic mock data for development');
     
-    // Return enhanced mock data with realistic Indian market values
+    // Return realistic mock data with proper Indian market values
     return symbols.map(symbol => {
       const basePrice = symbol === 'NSEI' ? 19500 :
                        symbol === 'BSESN' ? 65800 :
                        symbol === 'NSEBANK' ? 44200 :
                        3500;
       
-      const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
+      // Add realistic daily variation (±2%)
+      const variation = (Math.random() - 0.5) * 0.04;
       const price = basePrice * (1 + variation);
       const change = basePrice * variation;
       const changePercent = variation * 100;
@@ -308,11 +299,17 @@ export const fetchMarketData = async (symbols: string[]): Promise<MarketData[]> 
   }
 };
 
-// Utility function to format currency
+// Re-enable Alpha Vantage when you have API key
+export const enableAlphaVantageAPI = async (symbols: string[]): Promise<MarketData[]> => {
+  console.log('🔄 Alpha Vantage API enabled for:', symbols);
+  return await fetchMarketDataAlphaVantage(symbols);
+};
+
+// Utility function to format currency  
 export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value);

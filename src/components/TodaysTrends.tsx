@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Calendar, ExternalLink, RefreshCw, Eye, Clock, ArrowRight, BarChart3, Globe, Building2, Newspaper, Loader, FileText, Users, PieChart, Briefcase, Shield, TrendingUp as TrendingUpIcon, Building, Award } from 'lucide-react';
 import { useGoogleTrends } from '../hooks/useGoogleTrends';
-import { useFinancialNews } from '../hooks/useFinancialNews';
+import { useNews } from '../hooks/useNews';
 import { formatNewsDate } from '../services/newsService';
 
 interface IPO {
@@ -31,7 +31,7 @@ const TodaysTrends: React.FC = () => {
     error: trendsError,
     lastUpdate: trendsLastUpdate, 
     refetch: refetchTrends 
-  } = useGoogleTrends(300000); // 5 minutes auto-refresh
+  } = useGoogleTrends(); // No auto-refresh
   
   const { 
     news: financialNews, 
@@ -39,7 +39,7 @@ const TodaysTrends: React.FC = () => {
     error: newsError,
     lastUpdate: newsLastUpdate, 
     refetch: refetchNews 
-  } = useFinancialNews(300000); // 5 minutes auto-refresh
+  } = useNews({ status: 'active', limit: 20 });
 
 
 

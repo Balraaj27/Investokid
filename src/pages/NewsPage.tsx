@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, ExternalLink, Clock, Search, Filter } from 'lucide-react';
-import { useFinancialNews } from '../hooks/useFinancialNews';
+import { useNews } from '../hooks/useNews';
 
 const NewsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,9 +14,8 @@ const NewsPage: React.FC = () => {
     news, 
     loading, 
     error,
-    lastUpdate, 
     refetch 
-  } = useFinancialNews(300000); // 5 minutes auto-refresh
+  } = useNews({ autoRefresh: true });
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -91,7 +90,7 @@ const NewsPage: React.FC = () => {
               <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
                 <Clock className="h-4 w-4" />
                 <span className="font-medium">
-                  Updated: {lastUpdate ? formatTime(lastUpdate) : 'Never'}
+                  Updated: {new Date().toLocaleTimeString()}
                 </span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
