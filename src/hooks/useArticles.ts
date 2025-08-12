@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { articlesAPI } from '../services/api';
 import type { Article } from '../lib/supabase';
 import { mockArticles } from '../data/mockData';
+import { commongetrequest, universalget, universalpost, universalput } from '../services/services';
 
 interface UseArticlesOptions {
   category?: string;
@@ -35,14 +36,22 @@ export const useArticles = (options: UseArticlesOptions = {}): UseArticlesReturn
       setLoading(true);
       setError(null);
       
-      const data = await articlesAPI.getAll({
-        category: options.category,
-        status: options.status || 'published',
-        search: options.search,
-        limit: options.limit
-      });
+      const datares = await universalget("4000","api/articles")
+      if(datares?.status==200){
+        const data=datares?.data||[]
+        console.log(data,"data")
+        setArticles(data)
+      }
+     
+     
+      // ({
+      //   category: options.category,
+      //   status: options.status || 'published',
+      //   search: options.search,
+      //   limit: options.limit
+      // });
       
-      setArticles(data);
+     
       setHasAttemptedFetch(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');
@@ -53,7 +62,7 @@ export const useArticles = (options: UseArticlesOptions = {}): UseArticlesReturn
     } finally {
       setLoading(false);
     }
-  }, [options.category, options.status, options.search, options.limit, hasAttemptedFetch, articles.length]);
+  }, [articles?.length]);
 
   const refetch = useCallback(() => {
     setHasAttemptedFetch(false);
@@ -62,7 +71,8 @@ export const useArticles = (options: UseArticlesOptions = {}): UseArticlesReturn
 
   const createArticle = useCallback(async (articleData: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const newArticle = await articlesAPI.create(articleData);
+      const newArticle = await universalpost("4000","api/articles",articleData)
+      console.log(newArticle,"test")
       setArticles(prev => [newArticle, ...prev]);
       return newArticle;
     } catch (err) {
@@ -73,11 +83,12 @@ export const useArticles = (options: UseArticlesOptions = {}): UseArticlesReturn
 
   const updateArticle = useCallback(async (id: string, updates: Partial<Article>) => {
     try {
-      const updatedArticle = await articlesAPI.update(id, updates);
-      setArticles(prev => prev.map(article => 
-        article.id === id ? updatedArticle : article
-      ));
-      return updatedArticle;
+      const updatedArticle =  await universalput("4000",`api/articles/${updates?.id}`,updates)
+      console.log(updatedArticle,"check")
+      // setArticles(prev => prev.map(article => 
+      //   article.id === id ? updatedArticle : article
+      // ));
+      // return updatedArticle;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update article');
       throw err;

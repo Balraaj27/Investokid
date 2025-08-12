@@ -63,8 +63,8 @@ const TechnicalAnalysis: React.FC = () => {
   const allPosts: Post[] = [
     {
       id: 1,
-      title: "Introduction to Technical Analysis",
-      excerpt: "Learn the fundamentals of technical analysis and how to read price charts effectively.",
+      title: "Introduction to testing Technical Analysis",
+      excerpt: "Learn the test fundamentals of technical analysis and how to read price charts effectively.",
       content: "Technical analysis is the study of past market data, primarily price and volume...",
       author: "Alex Thompson",
       readTime: "10 min read",

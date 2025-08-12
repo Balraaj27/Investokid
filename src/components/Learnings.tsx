@@ -4,6 +4,7 @@ import { GraduationCap, BarChart3, Calculator, Coins, ArrowRight, BookOpen, Tren
 import { useArticles } from '../hooks/useArticles';
 import { usePlatformUpdates } from '../hooks/usePlatformUpdates';
 import type { Article } from '../lib/supabase';
+import { universalget, universalpost } from '../services/services';
 
 interface CategoryData {
   id: string;
@@ -18,8 +19,10 @@ interface CategoryData {
 
 const Learnings: React.FC = () => {
   const navigate = useNavigate();
+  const [articles,setArticles]=useState<any>([])
   const [activeCategory, setActiveCategory] = useState('all');
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [loading,setLoading]=useState<any>(false)
   const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({
     readers: 0,
@@ -27,9 +30,26 @@ const Learnings: React.FC = () => {
     views: 0,
     shares: 0
   });
-
+useEffect(()=>{
+  getintdata()
+},[])
+const getintdata=async()=>{
+try{
+  setLoading(true)
+  const datares = await universalget("4000","api/articles")
+  if(datares?.status==200){
+    const data=datares?.data||[]
+    console.log(data,"data")
+    setArticles(datares?.data)
+  }
+}catch(err:any){
+  console.log(err?.message)
+}finally{
+  setLoading(false)
+}
+}
   // Use backend data hooks
-  const { articles, loading, error: articlesError } = useArticles({ status: 'published' });
+  // const { articles, loading, error: articlesError } = useArticles({ status: 'published' });
   const { updates: platformUpdates, loading: updatesLoading } = usePlatformUpdates({ 
     status: 'published', 
     limit: 3 
@@ -63,7 +83,7 @@ const Learnings: React.FC = () => {
 
   // Group articles by category
   const getArticlesByCategory = (category: string): Article[] => {
-    return articles.filter(article => 
+    return articles?.filter(article => 
       article.status === 'published' && 
       article.category === category
     );
@@ -73,16 +93,16 @@ const Learnings: React.FC = () => {
   const getCategoryStats = (category: string) => {
     const categoryArticles = getArticlesByCategory(category);
     return {
-      count: categoryArticles.length,
-      totalViews: categoryArticles.reduce((sum, article) => sum + article.views, 0),
-      avgReadTime: categoryArticles.length > 0 
-        ? Math.round(categoryArticles.reduce((sum, article) => {
+      count: categoryArticles?.length,
+      totalViews: categoryArticles?.reduce((sum, article) => sum + article.views, 0),
+      avgReadTime: categoryArticles?.length > 0 
+        ? Math.round(categoryArticles?.reduce((sum, article) => {
             const time = parseInt(article.read_time.split(' ')[0]);
             return sum + time;
-          }, 0) / categoryArticles.length)
+          }, 0) / categoryArticles?.length)
         : 0,
-      latestUpdate: categoryArticles.length > 0
-        ? new Date(Math.max(...categoryArticles.map(a => new Date(a.publish_date).getTime())))
+      latestUpdate: categoryArticles?.length > 0
+        ? new Date(Math.max(...categoryArticles?.map(a => new Date(a.publish_date).getTime())))
         : new Date()
     };
   };
@@ -90,42 +110,43 @@ const Learnings: React.FC = () => {
   // Get recent topics for a category
   const getRecentTopics = (category: string): string[] => {
     return getArticlesByCategory(category)
-      .sort((a, b) => new Date(b.publish_date).getTime() - new Date(a.publish_date).getTime())
+      ?.sort((a, b) => new Date(b.publish_date).getTime() - new Date(a.publish_date).getTime())
       .slice(0, 4)
       .map(article => article.title);
   };
 
   // Dynamic categories based on backend data
+  console.log(articles,"articles")
   const categories = [
     { 
       id: 'all', 
       name: 'All Articles', 
       icon: BookOpen, 
-      count: articles.filter(a => a.status === 'published').length 
+      count: articles?.filter(a => a.status === 'published').length 
     },
     { 
       id: 'basics', 
-      name: 'Investment Basics', 
+      name: 'Investment test Basics', 
       icon: GraduationCap, 
-      count: getArticlesByCategory('Investment Basics').length 
+      count: getArticlesByCategory('Investment Basics')?.length 
     },
     { 
       id: 'analysis', 
       name: 'Technical Analysis', 
       icon: BarChart3, 
-      count: getArticlesByCategory('Technical Analysis').length 
+      count: getArticlesByCategory('Technical Analysis')?.length 
     },
     { 
       id: 'planning', 
       name: 'Financial Planning', 
       icon: Calculator, 
-      count: getArticlesByCategory('Financial Planning').length 
+      count: getArticlesByCategory('Financial Planning')?.length 
     },
     { 
       id: 'crypto', 
       name: 'Cryptocurrency', 
       icon: Coins, 
-      count: getArticlesByCategory('Cryptocurrency').length 
+      count: getArticlesByCategory('Cryptocurrency')?.length 
     }
   ];
 
@@ -145,7 +166,7 @@ const Learnings: React.FC = () => {
       readers: `${Math.floor(getCategoryStats('Investment Basics').totalViews / 1000)}K`,
       engagement: '4.9★',
       features: ['Risk Assessment', 'Portfolio Building', 'Market Analysis', 'Investment Strategies'],
-      recentTopics: getRecentTopics('Investment Basics').slice(0, 4)
+      recentTopics: getRecentTopics('Investment Basics')?.slice(0, 4)
     },
     {
       id: 'analysis',
@@ -161,7 +182,7 @@ const Learnings: React.FC = () => {
       readers: `${Math.floor(getCategoryStats('Technical Analysis').totalViews / 1000)}K`,
       engagement: '4.8★',
       features: ['Chart Patterns', 'Technical Indicators', 'Trading Signals', 'Risk Management'],
-      recentTopics: getRecentTopics('Technical Analysis').slice(0, 4)
+      recentTopics: getRecentTopics('Technical Analysis')?.slice(0, 4)
     },
     {
       id: 'planning',
@@ -177,7 +198,7 @@ const Learnings: React.FC = () => {
       readers: `${Math.floor(getCategoryStats('Financial Planning').totalViews / 1000)}K`,
       engagement: '4.9★',
       features: ['Budgeting', 'Retirement Planning', 'Tax Optimization', 'Estate Planning'],
-      recentTopics: getRecentTopics('Financial Planning').slice(0, 4)
+      recentTopics: getRecentTopics('Financial Planning')?.slice(0, 4)
     },
     {
       id: 'crypto',
@@ -193,7 +214,7 @@ const Learnings: React.FC = () => {
       readers: `${Math.floor(getCategoryStats('Cryptocurrency').totalViews / 1000)}K`,
       engagement: '4.7★',
       features: ['Blockchain Tech', 'DeFi Protocols', 'NFT Markets', 'Crypto Trading'],
-      recentTopics: getRecentTopics('Cryptocurrency').slice(0, 4)
+      recentTopics: getRecentTopics('Cryptocurrency')?.slice(0, 4)
     }
   ];
 
@@ -376,7 +397,7 @@ const Learnings: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          {filteredCards.map((card, index) => (
+          {filteredCards?.map((card, index) => (
             <div
               key={card.id}
               onMouseEnter={() => setHoveredCard(index)}
@@ -439,7 +460,7 @@ const Learnings: React.FC = () => {
                 <div className="mb-6">
                   <h4 className="text-sm font-semibold text-slate-700 mb-3">Recent Topics:</h4>
                   <div className="flex flex-wrap gap-2">
-                    {card.recentTopics.length > 0 ? (
+                    {card?.recentTopics.length > 0 ? (
                       <>
                         {card.recentTopics.slice(0, 2).map((topic, i) => (
                           <span
@@ -465,7 +486,7 @@ const Learnings: React.FC = () => {
                 </div>
                 {/* Features */}
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {card.features.slice(0, 2).map((feature, i) => (
+                  {card?.features.slice(0, 2).map((feature, i) => (
                     <span
                       key={i}
                       className="px-3 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium border border-blue-200/50"
@@ -473,9 +494,9 @@ const Learnings: React.FC = () => {
                       {feature}
                     </span>
                   ))}
-                  {card.features.length > 2 && (
+                  {card?.features.length > 2 && (
                     <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
-                      +{card.features.length - 2} more
+                      +{card?.features.length - 2} more
                     </span>
                   )}
                 </div>

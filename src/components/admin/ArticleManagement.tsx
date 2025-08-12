@@ -103,7 +103,7 @@ const ArticleManagement: React.FC = () => {
     
     setEditingArticle({
       ...editingArticle,
-      content_blocks: [...editingArticle.content_blocks, newBlock]
+      content_blocks: [...editingArticle?.content_blocks, newBlock]
     });
   };
 
@@ -112,7 +112,7 @@ const ArticleManagement: React.FC = () => {
     
     setEditingArticle({
       ...editingArticle,
-      content_blocks: editingArticle.content_blocks.map(block =>
+      content_blocks: editingArticle?.content_blocks.map(block =>
         block.id === blockId ? { ...block, ...updates } : block
       )
     });
@@ -167,7 +167,7 @@ const ArticleManagement: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <BlockIcon className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700 capitalize">{block.type}</span>
+            <span className="text-sm font-medium text-gray-700 capitalize">{block?.type}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -179,7 +179,7 @@ const ArticleManagement: React.FC = () => {
             </button>
             <button
               onClick={() => moveContentBlock(block.id, 'down')}
-              disabled={!editingArticle || index === editingArticle.content_blocks.length - 1}
+              disabled={!editingArticle || index === editingArticle?.content_blocks?.length - 1}
               className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
             >
               <ChevronDown className="h-4 w-4" />
@@ -194,11 +194,11 @@ const ArticleManagement: React.FC = () => {
         </div>
 
         {/* Block Content Editor */}
-        {block.type === 'heading' && (
+        {block?.type === 'heading' && (
           <div className="space-y-3">
             <div className="flex items-center gap-4">
               <select
-                value={block.metadata?.level || 2}
+                value={block?.metadata?.level || 2}
                 onChange={(e) => updateContentBlock(block.id, {
                   metadata: { ...block.metadata, level: parseInt(e.target.value) }
                 })}
@@ -778,7 +778,7 @@ const ArticleManagement: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <label className="block text-sm font-medium text-gray-700">Rich Content Builder</label>
                   <div className="text-xs text-gray-500">
-                    {editingArticle.content_blocks.length} content blocks
+                    {editingArticle?.content_blocks?.length} content blocks
                   </div>
                 </div>
                 
@@ -799,11 +799,11 @@ const ArticleManagement: React.FC = () => {
                     ].map(blockType => (
                       <button
                         key={blockType.type}
-                        onClick={() => addContentBlock(blockType.type)}
+                        onClick={() => addContentBlock(blockType?.type)}
                         className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                       >
                         <blockType.icon className="h-4 w-4" />
-                        {blockType.label}
+                        {blockType?.label}
                       </button>
                     ))}
                   </div>
@@ -811,13 +811,13 @@ const ArticleManagement: React.FC = () => {
 
                 {/* Content Blocks */}
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {editingArticle.content_blocks.length === 0 ? (
+                  {editingArticle?.content_blocks?.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <Type className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                       <p className="text-sm">No content blocks yet. Add your first block above!</p>
                     </div>
                   ) : (
-                    editingArticle.content_blocks.map((block, index) => 
+                    editingArticle?.content_blocks?.map((block, index) => 
                       renderContentBlockEditor(block, index)
                     )
                   )}
@@ -830,7 +830,7 @@ const ArticleManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Author</label>
                   <input
                     type="text"
-                    value={editingArticle.author}
+                    value={editingArticle?.author}
                     onChange={(e) => setEditingArticle({ ...editingArticle, author: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Author name"
@@ -840,11 +840,11 @@ const ArticleManagement: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                   <select
-                    value={editingArticle.category}
+                    value={editingArticle?.category}
                     onChange={(e) => setEditingArticle({ ...editingArticle, category: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {categories.map(category => (
+                    {categories?.map(category => (
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
@@ -853,7 +853,7 @@ const ArticleManagement: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   <select
-                    value={editingArticle.status}
+                    value={editingArticle?.status}
                     onChange={(e) => setEditingArticle({ ...editingArticle, status: e.target.value as Article['status'] })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -869,7 +869,7 @@ const ArticleManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
                   <input
                     type="date"
-                    value={editingArticle.publish_date}
+                    value={editingArticle?.publish_date}
                     onChange={(e) => setEditingArticle({ ...editingArticle, publish_date: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -881,7 +881,7 @@ const ArticleManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Read Time</label>
                 <input
                   type="text"
-                  value={editingArticle.read_time}
+                  value={editingArticle?.read_time}
                   onChange={(e) => setEditingArticle({ ...editingArticle, read_time: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., 5 min read"
@@ -893,7 +893,7 @@ const ArticleManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
                 <input
                   type="text"
-                  value={editingArticle.tags.join(', ')}
+                  value={editingArticle?.tags?.join(', ')}
                   onChange={(e) => setEditingArticle({ 
                     ...editingArticle, 
                     tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
